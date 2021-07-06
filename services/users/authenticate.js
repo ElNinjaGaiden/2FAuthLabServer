@@ -14,8 +14,15 @@ async function authenticate (req, resp) {
 
         const { password: storedPassword } = user;
         const responseData = {
-            success: password === storedPassword
+            success: true
         };
+        if (password === storedPassword) {
+            responseData.data = {
+                userId: user._id
+            };
+        } else {
+            responseData.success = false
+        }
         resp.json(responseData);
     } catch (error) {
         console.error(error);
