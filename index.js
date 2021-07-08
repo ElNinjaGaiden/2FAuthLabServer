@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const api = require('./api');
 const dotenv = require('dotenv');
+const cors = require('cors');
 
 if (process.env.NODE_ENV !== 'production') {
     dotenv.config({ path: '.env' });
@@ -16,7 +17,8 @@ const {
     PORT,
     DATABASE_USER: dbUser,
     DATABASE_PASSWORD: dbPassword,
-    DATABASE_NAME: dbName
+    DATABASE_NAME: dbName,
+    API_ENABLED_ORIGINS: apiEnabledOrigins
 } = process.env;
 const dbConnString = `mongodb+srv://${dbUser}:${dbPassword}@cluster0.ybgkb.mongodb.net/${dbName}?retryWrites=true&w=majority`;
 const _PORT = PORT || 5000;
@@ -26,6 +28,21 @@ const app = express();
 
 // Middlewares
 app.use(express.json());
+
+const allowedOrigins = (apiEnabledOrigins || '').split(',')
+app.use(cors({
+    origin: function(origin, callback) {
+        // allow requests with no origin 
+        // (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) === -1) {
+            var msg = 'The CORS policy for this site does not ' +
+                    'allow access from the specified Origin.';
+            return callback(new Error(msg), false);
+        }
+        return callback(null, true);
+    }
+}));
 
 // Express endpoints
 app.use('/api', api);
