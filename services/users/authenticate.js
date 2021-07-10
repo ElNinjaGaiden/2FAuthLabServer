@@ -13,17 +13,16 @@ async function authenticate (req, resp) {
         }
 
         const { password: storedPassword } = user;
-        const responseData = {
-            success: true
-        };
         if (password === storedPassword) {
-            responseData.data = {
-                userId: user._id
+            user.password = undefined;
+            const responseData = {
+                success: true,
+                data: user
             };
+            resp.json(responseData);
         } else {
-            responseData.success = false
+            throw Error('Password does not match');
         }
-        resp.json(responseData);
     } catch (error) {
         console.error(error);
         resp.status(500).json({ message: error.message });

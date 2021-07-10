@@ -13,27 +13,42 @@ async function verify (req, resp) {
             throw Error('User does not exists');
         }
 
-        const { base32: secret } = user.tmpSecret;
-        const verified = speakeasy.totp.verify({
-            secret,
-            encoding: 'base32',
-            token
-        });
+        const { tmpSecret, secret } = user;
+        if (tmpSecret && !secret) {
+            const { base32: secret } = user.tmpSecret;
+            const verified = speakeasy.totp.verify({
+                secret,
+                encoding: 'base32',
+                token
+            });
 
-        const responseData = {
-            success: true
-        };
+            const responseData = {
+                success: true
+            };
 
-        if(verified) {
-            // Update user data
-            user.secret = Object.assign({}, user.tmpSecret);
-            user.tmpSecret = undefined;
-            await user.save();
+            if(verified) {
+                // Update user data
+                user.secret = Object.assign({}, user.tmpSecret);
+                user.tmpSecret = undefined;
+                await user.save();
+            } else {
+                responseData.success = false;
+            }
+            resp.json(responseData);
         } else {
-            responseData.success = false;
-        }
+            // User has verified his secret/token previously, lets use the persisted 'secret' instead of the tm secret
+            const { base32 } = secret;
+            const validated = speakeasy.totp.verify({
+                base32,
+                encoding: 'base32',
+                token
+            });
 
-        resp.json(responseData);
+            const responseData = {
+                success: validated
+            };
+            resp.json(responseData);
+        }
     } catch (error) {
         console.error(error);
         resp.status(500).json({ message: error.message });
