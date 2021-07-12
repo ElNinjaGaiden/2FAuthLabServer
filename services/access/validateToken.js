@@ -1,7 +1,7 @@
 const speakeasy = require('speakeasy');
 const User = require('../../models/user');
 
-async function validateToken (req, resp) {
+async function validateToken (req, resp, next) {
     try {
         const { userId, token } = req.body;
         if(!userId || !token) {
@@ -19,11 +19,17 @@ async function validateToken (req, resp) {
             encoding: 'base32',
             token
         });
-
-        const responseData = {
-            success: validated
-        };
-        resp.json(responseData);
+        if (validated) {
+            req.locals = {
+                user
+            };
+            next();
+        } else {
+            const responseData = {
+                success: false
+            };
+            resp.json(responseData);
+        }
     } catch (error) {
         console.error(error);
         resp.status(500).json({ message: error.message });

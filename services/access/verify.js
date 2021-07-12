@@ -1,7 +1,7 @@
 const speakeasy = require('speakeasy');
 const User = require('../../models/user');
 
-async function verify (req, resp) {
+async function verify (req, resp, next) {
     try {
         const { userId, token } = req.body;
         if(!userId || !token) {
@@ -21,20 +21,21 @@ async function verify (req, resp) {
                 encoding: 'base32',
                 token
             });
-
-            const responseData = {
-                success: true
-            };
-
             if(verified) {
                 // Update user data
                 user.secret = Object.assign({}, user.tmpSecret);
                 user.tmpSecret = undefined;
                 await user.save();
+                req.locals = {
+                    user
+                };
+                next()
             } else {
-                responseData.success = false;
+                const responseData = {
+                    success: false
+                };
+                resp.json(responseData);
             }
-            resp.json(responseData);
         } else {
             // User has verified his secret/token previously, lets use the persisted 'secret' instead of the tm secret
             const { base32 } = secret;
@@ -43,11 +44,17 @@ async function verify (req, resp) {
                 encoding: 'base32',
                 token
             });
-
-            const responseData = {
-                success: validated
-            };
-            resp.json(responseData);
+            if (validated) {
+                req.locals = {
+                    user
+                };
+                next()
+            } else {
+                const responseData = {
+                    success: false
+                };
+                resp.json(responseData);
+            }
         }
     } catch (error) {
         console.error(error);
